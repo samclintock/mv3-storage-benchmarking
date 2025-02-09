@@ -2,10 +2,6 @@
     "manifest_version": 3,
     "name": "MV3 Storage Benchmarking",
     "version": "0.0.1",
-    "action": {
-      "default_title": "MV3 Storage Benchmarking",
-      "default_popup": "popup.html"
-    },
     "description": "Benchmarking MV3 storage",
     "background": {
       "service_worker": "service-worker.js"

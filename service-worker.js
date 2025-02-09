@@ -1,177 +1,215 @@
-chrome.runtime.onMessage.addListener(async (request) => {
-    if (request.message === "generate") {
-        // Clear any previous performance marks and measures
-        performance.clearMarks();
-        performance.clearMeasures();
-
-        const iterations = [ 1, 10, 100, 1000 ];
-
-        for (let i = 0; i < 4; i++) {
-            await benchmarkChromeLocalStorage(iterations[i]);
-        }
-
-        for (let i = 0; i < 4; i++) {
-            await benchmarkIndexedDB(iterations[i]);
-        }
-    }
-});
-
-benchmarkChromeLocalStorage = async (iterations) => {
-    // Clear any previous entries in local storage
+const benchmarkStorageApi = async (rowsInserted, getAndSet = false) => {
+    // Clear any previous entries in chrome.storage.local
     await chrome.storage.local.clear();
 
-    performance.mark(`startChromeLocalStorageSet${iterations}`);
-    for (let i = 0; i < iterations; i++) {
-        await chrome.storage.local.set({ [`benchmarkKey-${iterations}-${i}`]: `benchmarkValue${i}` }, );
+    performance.mark(`startStorageApiSet${rowsInserted}`);
+
+    for (let i = 0; i < rowsInserted; i++) {
+        await chrome.storage.local.set({ [`benchmarkKey-${rowsInserted}-${i}`]: `benchmarkValue${i}` }, );
     }
-    performance.mark(`stopChromeLocalStorageSet${iterations}`);
+
+    performance.mark(`stopStorageApiSet${rowsInserted}`);
 
     performance.measure(
-        `chromeLocalStorageSet${iterations}`,
-        `startChromeLocalStorageSet${iterations}`,
-        `stopChromeLocalStorageSet${iterations}`
+        `storageApiSet${rowsInserted}`,
+        `startStorageApiSet${rowsInserted}`,
+        `stopStorageApiSet${rowsInserted}`
     );
 
-    const localStorageSet = performance.getEntriesByName(`chromeLocalStorageSet${iterations}`)[0];
+    if (!getAndSet) {
+        return formatDuration(performance.getEntriesByName(`storageApiSet${rowsInserted}`)[0].duration);
+    }
 
-    console.log(
-        `chrome.storage.local (async) set for ${iterations} entries: ${JSON.stringify(
-            localStorageSet.duration
-        )}ms`
-    );
+    const storageApiData = [];
 
-    const localStorageValues = [];
-    performance.mark(`startChromeLocalStorageGet${iterations}`);
-    for (let i = 0; i < iterations; i++) {
-        localStorageValues.push(
-            await chrome.storage.local.get(`benchmarkKey-${iterations}-${i}`)
+    performance.mark(`startStorageApiGet${rowsInserted}`);
+
+    for (let i = 0; i < rowsInserted; i++) {
+        storageApiData.push(
+            await chrome.storage.local.get(`benchmark-${rowsInserted}-${i}`)
         );
     }
-    performance.mark(`stopChromeLocalStorageGet${iterations}`);
 
-    if (!(localStorageValues?.length === iterations)) {
-        console.error(`Not all chrome.storage.local entries were successfully saved for ${iterations} iterations.`)
+    performance.mark(`stopStorageApiGet${rowsInserted}`);
+
+    if (!(storageApiData?.length === rowsInserted)) {
+        console.error(`Not all storage entries were saved for ${rowsInserted} iterations.`)
     }
 
     performance.measure(
-        `chromeLocalStorageGet${iterations}`,
-        `startChromeLocalStorageGet${iterations}`,
-        `stopChromeLocalStorageGet${iterations}`
+        `storageApiGet${rowsInserted}`,
+        `startStorageApiGet${rowsInserted}`,
+        `stopStorageApiGet${rowsInserted}`
     );
 
-    const localStorageGet = performance.getEntriesByName(`chromeLocalStorageGet${iterations}`)[0];
-
-    console.log(
-        `chrome.storage.local (async) get for ${iterations} entries: ${JSON.stringify(
-            localStorageGet.duration
-        )}ms`
-    );
+    return formatDuration(performance.getEntriesByName(`storageApiGet${rowsInserted}`)[0].duration);
 }
 
-const DB_NAME = "benchmarkIndexedDB";
-const OBJECT_STORE_NAME = "benchmarkValues";
+const benchmarkIndexedDb = async (rowsInserted, getAndSet = false) => {
+    return new Promise((resolve, reject) => {
+        const dbName = "benchmarks";
+        const objectStoreName = "values";
+        const dbRequest = globalThis.indexedDB.open(dbName, 1);
 
-benchmarkIndexedDB = async (iterations) => {
-    const databaseRequest = globalThis.indexedDB.open(this.DB_NAME, 1);
+        dbRequest.onerror = () => {
+            reject(`Unable to open the database: ${dbName}`);
+        };
 
-    databaseRequest.onerror = () => {
-        throw new Error(`Unable to open the database: ${this.DB_NAME}`);
-    };
+        dbRequest.onupgradeneeded = () => {
+            const db = dbRequest.result;
 
-    databaseRequest.onupgradeneeded = () => {
-        const database = databaseRequest.result;
-        if (!database.objectStoreNames.contains(this.OBJECT_STORE_NAME)) {
-            database.createObjectStore(this.OBJECT_STORE_NAME);
-        }
-    };
+            if (!db.objectStoreNames.contains(objectStoreName)) {
+                db.createObjectStore(objectStoreName);
+            }
+        };
 
-    databaseRequest.onsuccess = async () => {
-        const database = databaseRequest.result;
+        dbRequest.onsuccess = async () => {
+            const db = dbRequest.result;
 
-        const objectStore = database
-            .transaction([this.OBJECT_STORE_NAME], "readwrite")
-            .objectStore(this.OBJECT_STORE_NAME);
+            const objectStore = db
+                .transaction([objectStoreName], "readwrite")
+                .objectStore(objectStoreName);
 
-        // Clear any previous records that may exist in the object store
-        objectStore.clear();
+            // Clear any previous records that may exist in the object store
+            objectStore.clear();
 
-        performance.mark(`startIndexedDBPut${iterations}`);
-        for (let i = 0; i < iterations; i++) {
-            await objectStorePut(
-                objectStore,
-                `benchmarkValue${i}`,
-                `benchmarkKey-${iterations}-${i}`
+            performance.mark(`startIndexedDbSet${rowsInserted}`);
+
+            for (let i = 0; i < rowsInserted; i++) {
+                await objectStorePut(
+                    objectStore,
+                    `benchmarkValue${i}`,
+                    `benchmarkKey-${rowsInserted}-${i}`
+                );
+            }
+
+            performance.mark(`stopIndexedDbSet${rowsInserted}`);
+
+            performance.measure(
+                `indexedDbSet${rowsInserted}`,
+                `startIndexedDbSet${rowsInserted}`,
+                `stopIndexedDbSet${rowsInserted}`
             );
-        }
-        performance.mark(`stopIndexedDBPut${iterations}`);
 
-        performance.measure(
-        `indexedDBPut${iterations}`,
-        `startIndexedDBPut${iterations}`,
-        `stopIndexedDBPut${iterations}`
-        );
+            if (!getAndSet) {
+                resolve(formatDuration(performance.getEntriesByName(`indexedDbSet${rowsInserted}`)[0].duration));
+            }
 
-        const indexedDBPut = performance.getEntriesByName(`indexedDBPut${iterations}`)[0];
+            const indexedDbData = [];
 
-        console.log(
-            `IndexedDB (async) set for ${iterations} entries: ${JSON.stringify(
-                indexedDBPut.duration
-            )}ms`
-        );
+            performance.mark(`startIndexedDbGet${rowsInserted}`);
 
-        const indexedDBValues = [];
-        performance.mark(`startIndexedDBGet${iterations}`);
-        for (let i = 0; i < iterations; i++) {
-            indexedDBValues.push(
-                await objectStoreGet(objectStore, `benchmarkKey-${iterations}-${i}`)
+            for (let i = 0; i < rowsInserted; i++) {
+                indexedDbData.push(
+                    await objectStoreGet(objectStore, `benchmarkKey-${rowsInserted}-${i}`)
+                );
+            }
+
+            performance.mark(`stopIndexedDbGet${rowsInserted}`);
+
+            if (!(indexedDbData?.length === rowsInserted)) {
+                console.error(`Not all IndexedDB entries were saved for ${rowsInserted} iterations.`)
+            }
+
+            performance.measure(
+                `indexedDbGet${rowsInserted}`,
+                `startIndexedDbGet${rowsInserted}`,
+                `stopIndexedDbGet${rowsInserted}`
             );
-        }
-        performance.mark(`stopIndexedDBGet${iterations}`);
 
-        if (!(indexedDBValues?.length === iterations)) {
-            console.error(`Not all IndexedDB entries were successfully saved for ${iterations} iterations.`)
+            resolve(formatDuration(performance.getEntriesByName(`indexedDbGet${rowsInserted}`)[0].duration));
         }
 
-        performance.measure(
-        `indexedDBGet${iterations}`,
-        `startIndexedDBGet${iterations}`,
-        `stopIndexedDBGet${iterations}`
-        );
+        const objectStorePut = async (objectStore, key, value) => {
+            return new Promise((resolve, reject) => {
+                const objectStoreRequest = objectStore.put(value, key);
+        
+                objectStoreRequest.onsuccess = () => {
+                    resolve();
+                };
+        
+                objectStoreRequest.onerror = () => {
+                    reject();
+                };
+            });
+        }
 
-        const indexedDBGet = performance.getEntriesByName(`indexedDBGet${iterations}`)[0];
-
-        console.log(
-            `IndexedDB (async) get for ${iterations} entries: ${JSON.stringify(
-                indexedDBGet.duration
-            )}ms`
-        );
-    };
-
-    objectStoreGet = async (objectStore, key) => {
-        return new Promise((resolve, reject) => {
-            const objectStoreRequest = objectStore.get(key);
-    
-            objectStoreRequest.onsuccess = () => {
-                resolve(objectStoreRequest.result);
-            };
-    
-            objectStoreRequest.onerror = () => {
-                reject();
-            };
-        });
-    }
-    
-    objectStorePut = async (objectStore, key, value) => {
-        return new Promise((resolve, reject) => {
-            const objectStoreRequest = objectStore.put(value, key);
-    
-            objectStoreRequest.onsuccess = () => {
-                resolve();
-            };
-    
-            objectStoreRequest.onerror = () => {
-                reject();
-            };
-        });
-    }
+        const objectStoreGet = async (objectStore, key) => {
+            return new Promise((resolve, reject) => {
+                const objectStoreRequest = objectStore.get(key);
+        
+                objectStoreRequest.onsuccess = () => {
+                    resolve(objectStoreRequest.result);
+                };
+        
+                objectStoreRequest.onerror = () => {
+                    reject();
+                };
+            });
+        }
+    });
 }
+
+const formatDuration = (duration) => Math.round(duration * 100) / 100;
+
+let benchmarks = [];
+
+(async () => {
+    // Clear any previous performance marks and measures
+    performance.clearMarks();
+    performance.clearMeasures();
+
+    benchmarks = [
+        {
+            rowsInserted: 1,
+            operation: "set",
+            storageApi: await benchmarkStorageApi(1),
+            indexedDB: await benchmarkIndexedDb(1)
+        },
+        {
+            rowsInserted: 10,
+            operation: "set",
+            storageApi: await benchmarkStorageApi(10),
+            indexedDB: await benchmarkIndexedDb(10)
+        },
+        {
+            rowsInserted: 100,
+            operation: "set",
+            storageApi: await benchmarkStorageApi(100),
+            indexedDB: await benchmarkIndexedDb(100)
+        },
+        {
+            rowsInserted: 1000,
+            operation: "set",
+            storageApi: await benchmarkStorageApi(1000),
+            indexedDB: await benchmarkIndexedDb(1000)
+        },
+        {
+            rowsInserted: 1,
+            operation: "get",
+            storageApi: await benchmarkStorageApi(1, true),
+            indexedDB: await benchmarkIndexedDb(1, true)
+        },
+        {
+            rowsInserted: 10,
+            operation: "get",
+            storageApi: await benchmarkStorageApi(10, true),
+            indexedDB: await benchmarkIndexedDb(10, true)
+        },
+        {
+            rowsInserted: 100,
+            operation: "get",
+            storageApi: await benchmarkStorageApi(100, true),
+            indexedDB: await benchmarkIndexedDb(100, true)
+        },
+        {
+            rowsInserted: 1000,
+            operation: "get",
+            storageApi: await benchmarkStorageApi(1000, true),
+            indexedDB: await benchmarkIndexedDb(1000, true)
+        },
+    ];
+
+    console.log("Benchmark data stored in the variable \"benchmarks\".");
+    console.log("Execute \"console.table(benchmarks)\" to view the data in tabular form.");
+})();
