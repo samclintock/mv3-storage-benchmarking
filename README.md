@@ -11,8 +11,8 @@ The script will be executed automatically upon the initialization of the service
     {
         rowsInserted: number,
         operation: 'get' | 'set',
-        storageApi: string,
-        indexedDB: string,
+        storageApi: number,
+        indexedDB: number,
     }
 ]
 ```
