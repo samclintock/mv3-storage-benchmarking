@@ -162,51 +162,51 @@ let benchmarks = [];
     benchmarks = [
         {
             rowsInserted: 1,
-            operation: "set",
-            storageApi: await benchmarkStorageApi(1),
-            indexedDB: await benchmarkIndexedDb(1)
+            storageOperation: "set",
+            durationOfStorageApi: await benchmarkStorageApi(1),
+            durationOfIndexedDB: await benchmarkIndexedDb(1)
         },
         {
             rowsInserted: 10,
-            operation: "set",
-            storageApi: await benchmarkStorageApi(10),
-            indexedDB: await benchmarkIndexedDb(10)
+            storageOperation: "set",
+            durationOfStorageApi: await benchmarkStorageApi(10),
+            durationOfIndexedDB: await benchmarkIndexedDb(10)
         },
         {
             rowsInserted: 100,
-            operation: "set",
-            storageApi: await benchmarkStorageApi(100),
-            indexedDB: await benchmarkIndexedDb(100)
+            storageOperation: "set",
+            durationOfStorageApi: await benchmarkStorageApi(100),
+            durationOfIndexedDB: await benchmarkIndexedDb(100)
         },
         {
             rowsInserted: 1000,
-            operation: "set",
-            storageApi: await benchmarkStorageApi(1000),
-            indexedDB: await benchmarkIndexedDb(1000)
+            storageOperation: "set",
+            durationOfStorageApi: await benchmarkStorageApi(1000),
+            durationOfIndexedDB: await benchmarkIndexedDb(1000)
         },
         {
             rowsInserted: 1,
-            operation: "get",
-            storageApi: await benchmarkStorageApi(1, true),
-            indexedDB: await benchmarkIndexedDb(1, true)
+            storageOperation: "get",
+            durationOfStorageApi: await benchmarkStorageApi(1, true),
+            durationOfIndexedDB: await benchmarkIndexedDb(1, true)
         },
         {
             rowsInserted: 10,
-            operation: "get",
-            storageApi: await benchmarkStorageApi(10, true),
-            indexedDB: await benchmarkIndexedDb(10, true)
+            storageOperation: "get",
+            durationOfStorageApi: await benchmarkStorageApi(10, true),
+            durationOfIndexedDB: await benchmarkIndexedDb(10, true)
         },
         {
             rowsInserted: 100,
-            operation: "get",
-            storageApi: await benchmarkStorageApi(100, true),
-            indexedDB: await benchmarkIndexedDb(100, true)
+            storageOperation: "get",
+            durationOfStorageApi: await benchmarkStorageApi(100, true),
+            durationOfIndexedDB: await benchmarkIndexedDb(100, true)
         },
         {
             rowsInserted: 1000,
-            operation: "get",
-            storageApi: await benchmarkStorageApi(1000, true),
-            indexedDB: await benchmarkIndexedDb(1000, true)
+            storageOperation: "get",
+            durationOfStorageApi: await benchmarkStorageApi(1000, true),
+            durationOfIndexedDB: await benchmarkIndexedDb(1000, true)
         },
     ];
 

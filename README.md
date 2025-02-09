@@ -10,9 +10,9 @@ The script will be executed automatically upon the initialization of the service
 [
     {
         rowsInserted: number,
-        operation: 'get' | 'set',
-        storageApi: number,
-        indexedDB: number,
+        storageOperation: 'get' | 'set',
+        durationOfStorageApi: number,
+        durationOfIndexedDB: number,
     }
 ]
 ```
